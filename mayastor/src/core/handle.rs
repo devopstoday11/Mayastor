@@ -14,6 +14,7 @@ use spdk_sys::{
     spdk_bdev_desc,
     spdk_bdev_free_io,
     spdk_bdev_io,
+    spdk_bdev_nvme_admin_passthru,
     spdk_bdev_read,
     spdk_bdev_reset,
     spdk_bdev_write,
@@ -21,6 +22,7 @@ use spdk_sys::{
 };
 
 use crate::{
+    bdev::nexus::nexus_io::nvme_admin_opc,
     core::{Bdev, CoreError, Descriptor, DmaBuf, DmaError, IoChannel},
     ffihelper::cb_arg,
 };
@@ -191,6 +193,74 @@ impl BdevHandle {
             Ok(0)
         } else {
             Err(CoreError::ResetFailed {})
+        }
+    }
+
+    pub async fn drive_identify(
+        &self,
+        buffer: &mut DmaBuf,
+    ) -> Result<usize, CoreError> {
+        trace!("Identify drive");
+        let mut cmd = spdk_sys::spdk_nvme_cmd::default();
+        cmd.set_opc(nvme_admin_opc::IDENTIFY.into());
+        cmd.nsid = 1;
+        self.nvme_admin(&cmd, buffer).await
+    }
+
+    pub async fn create_snapshot(&self) -> Result<usize, CoreError> {
+        trace!("Creating snapshot");
+        // Dummy buffer
+        let mut buf = self.dma_malloc(512).expect("failed to allocate buffer");
+        let mut cmd = spdk_sys::spdk_nvme_cmd::default();
+        cmd.set_opc(nvme_admin_opc::CREATE_SNAPSHOT.into());
+        self.nvme_admin(&cmd, &mut buf).await
+    }
+
+    pub async fn nvme_admin_custom(
+        &self,
+        opcode: u8,
+    ) -> Result<usize, CoreError> {
+        trace!("Creating snapshot");
+        // Dummy buffer
+        let mut buf = self.dma_malloc(512).expect("failed to allocate buffer");
+        let mut cmd = spdk_sys::spdk_nvme_cmd::default();
+        cmd.set_opc(opcode.into());
+        self.nvme_admin(&cmd, &mut buf).await
+    }
+
+    pub async fn nvme_admin(
+        &self,
+        nvme_cmd: &spdk_sys::spdk_nvme_cmd,
+        buffer: &mut DmaBuf,
+    ) -> Result<usize, CoreError> {
+        trace!("Sending nvme_admin");
+        let (s, r) = oneshot::channel::<bool>();
+        // FIXME buf not being sent on wire
+        let errno = unsafe {
+            spdk_bdev_nvme_admin_passthru(
+                self.desc.as_ptr(),
+                self.channel.as_ptr(),
+                &*nvme_cmd,
+                **buffer,
+                buffer.len() as u64,
+                Some(Self::io_completion_cb),
+                cb_arg(s),
+            )
+        };
+
+        if errno != 0 {
+            return Err(CoreError::NvmeAdminDispatch {
+                source: Errno::from_i32(errno),
+                opcode: (*nvme_cmd).opc(),
+            });
+        }
+
+        if r.await.expect("Failed awaiting NVME Admin IO") {
+            Ok(0)
+        } else {
+            Err(CoreError::NvmeAdminFailed {
+                opcode: (*nvme_cmd).opc(),
+            })
         }
     }
 }
