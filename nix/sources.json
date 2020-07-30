@@ -23,19 +23,6 @@
         "url": "https://github.com/axboe/liburing/archive/f0c5c54945ae92a00cdbb43bdf3abaeab6bd3a23.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
-    "mayastor": {
-        "branch": "v0.2.0",
-        "cargosha256": "1234",
-        "description": "A cloud native declarative data plane in containers for containers",
-        "homepage": null,
-        "owner": "openebs",
-        "repo": "mayastor",
-        "rev": "4c1d742273ab48a7f93cd08284b031c0694c9557",
-        "sha256": "1x4f4s4xgxlpb8rrw1k00iww2cy03ijbrilp58lkrblvxgrz73vv",
-        "type": "tarball",
-        "url": "https://github.com/openebs/mayastor/archive/4c1d742273ab48a7f93cd08284b031c0694c9557.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
     "niv": {
         "branch": "master",
         "description": "Easy dependency management for Nix projects",
