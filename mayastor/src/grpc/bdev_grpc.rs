@@ -17,7 +17,7 @@ use rpc::mayastor::{
 
 use crate::{
     core::{Bdev, Reactors, Share},
-    grpc::GrpcResult,
+    grpc::{export_config, GrpcResult},
     nexus_uri::{bdev_create, bdev_destroy, NexusBdevError},
 };
 
@@ -78,6 +78,7 @@ impl BdevRpc for BdevSvc {
         let uri = request.into_inner().uri;
         let bdev = locally! { async move { bdev_create(&uri).await } };
 
+        export_config()?;
         Ok(Response::new(CreateReply {
             name: bdev,
         }))
@@ -88,6 +89,7 @@ impl BdevRpc for BdevSvc {
         let uri = request.into_inner().uri;
         let _bdev = locally! { async move { bdev_destroy(&uri).await } };
 
+        export_config()?;
         Ok(Response::new(Null {}))
     }
 
@@ -108,7 +110,7 @@ impl BdevRpc for BdevSvc {
             return Err(Status::invalid_argument(proto));
         }
         let bdev_name = name.clone();
-        match proto.as_str() {
+        let response = match proto.as_str() {
             "nvmf" => Reactors::master().spawn_local(async move {
                 let bdev = Bdev::lookup_by_name(&bdev_name).unwrap();
                 bdev.share_nvmf()
@@ -132,7 +134,9 @@ impl BdevRpc for BdevSvc {
             Response::new(BdevShareReply {
                 uri: bdev.get_share_uri().unwrap_or(share),
             })
-        })
+        });
+        export_config()?;
+        response
     }
 
     #[instrument(level = "debug", err)]
@@ -147,7 +151,7 @@ impl BdevRpc for BdevSvc {
         });
 
         hdl.await.unwrap();
-
+        export_config()?;
         Ok(Response::new(Null {}))
     }
 }

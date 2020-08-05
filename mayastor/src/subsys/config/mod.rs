@@ -397,13 +397,17 @@ impl Config {
     pub fn import_bdevs(&'static self) {
         assert_eq!(Cores::current(), Cores::first());
         Reactor::block_on(async move {
-            // the order is pretty arbitrary the only key thing here is that
-            // there should not be any duplicate bdevs in the config
+            // There should not be any duplicate bdevs in the config
             // file. We count any creation failures, but we do not retry.
 
-            let mut errors = self.create_nexus_bdevs().await;
+            // The nexus should be created after the pools as it may be using
+            // the pool's lvol
+            // The base bdevs need to be created after the nexus as otherwise
+            // the nexus create will fail
+
+            let mut errors = self.create_pools().await;
+            errors += self.create_nexus_bdevs().await;
             errors += self.create_base_bdevs().await;
-            errors += self.create_pools().await;
 
             if errors != 0 {
                 warn!("Not all bdevs({}) where imported successfully", errors);

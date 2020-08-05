@@ -12,6 +12,7 @@ use crate::{
     },
     core::Cores,
     grpc::{
+        export_config,
         nexus_grpc::{
             nexus_add_child,
             nexus_destroy,
@@ -55,6 +56,7 @@ impl mayastor_server::Mayastor for MayastorSvc {
         let pool = locally! { pool::create_pool(args) };
 
         info!("Created or imported pool {}", name);
+        export_config()?;
         Ok(Response::new(pool))
     }
 
@@ -69,6 +71,7 @@ impl mayastor_server::Mayastor for MayastorSvc {
         debug!("Destroying pool {} ...", name);
         locally! { pool::destroy_pool(args) };
         info!("Destroyed pool {}", name);
+        export_config()?;
         Ok(Response::new(Null {}))
     }
 
@@ -99,6 +102,7 @@ impl mayastor_server::Mayastor for MayastorSvc {
         debug!("Creating replica {} on {} ...", uuid, args.pool);
         let replica = locally! { replica::create_replica(args) };
         info!("Created replica {} ...", uuid);
+        export_config()?;
         Ok(Response::new(replica))
     }
 
@@ -113,6 +117,7 @@ impl mayastor_server::Mayastor for MayastorSvc {
         debug!("Destroying replica {} ...", uuid);
         locally! { replica::destroy_replica(args) };
         info!("Destroyed replica {} ...", uuid);
+        export_config()?;
         Ok(Response::new(Null {}))
     }
 
@@ -153,6 +158,7 @@ impl mayastor_server::Mayastor for MayastorSvc {
         let reply = locally! { replica::share_replica(args) };
         info!("Shared replica {}", uuid);
         trace!("{:?}", reply);
+        export_config()?;
         Ok(Response::new(reply))
     }
 
@@ -171,6 +177,7 @@ impl mayastor_server::Mayastor for MayastorSvc {
         }};
         let nexus = nexus_lookup(&uuid)?;
         info!("Created nexus {}", uuid);
+        export_config()?;
         Ok(Response::new(nexus.to_grpc()))
     }
 
@@ -187,6 +194,7 @@ impl mayastor_server::Mayastor for MayastorSvc {
             nexus_destroy(&args.uuid).await
         }};
         info!("Destroyed nexus {}", uuid);
+        export_config()?;
         Ok(Response::new(Null {}))
     }
 
@@ -220,6 +228,7 @@ impl mayastor_server::Mayastor for MayastorSvc {
             nexus_add_child(args).await
         }};
         info!("Added child to nexus {}", uuid);
+        export_config()?;
         Ok(Response::new(child))
     }
 
@@ -236,6 +245,7 @@ impl mayastor_server::Mayastor for MayastorSvc {
             nexus_lookup(&args.uuid)?.remove_child(&args.uri).await
         }};
         info!("Removed child from nexus {}", uuid);
+        export_config()?;
         Ok(Response::new(Null {}))
     }
 
@@ -274,6 +284,7 @@ impl mayastor_server::Mayastor for MayastorSvc {
         }};
 
         info!("Published nexus {} under {}", uuid, device_uri);
+        export_config()?;
         Ok(Response::new(PublishNexusReply {
             device_uri,
         }))
@@ -292,6 +303,7 @@ impl mayastor_server::Mayastor for MayastorSvc {
             nexus_lookup(&args.uuid)?.unshare().await
         }};
         info!("Unpublished nexus {}", uuid);
+        export_config()?;
         Ok(Response::new(Null {}))
     }
 
@@ -318,6 +330,7 @@ impl mayastor_server::Mayastor for MayastorSvc {
             }
         }};
 
+        export_config()?;
         Ok(Response::new(Null {}))
     }
 

@@ -33,6 +33,24 @@ mod mayastor_grpc;
 mod nexus_grpc;
 mod server;
 
+use crate::{bdev::VerboseError, subsys};
 pub use server::MayastorGrpcServer;
 use tonic::{Response, Status};
+
 pub type GrpcResult<T> = std::result::Result<Response<T>, Status>;
+
+/// exports the current configuration to the optional config file
+pub fn export_config() -> std::result::Result<(), Status> {
+    let cfg = subsys::Config::get().refresh().unwrap();
+    match cfg.source.as_ref() {
+        Some(target) => match cfg.write(&target) {
+            Err(e) => {
+                error!("Failed to export config: {}", e.verbose());
+                Err(Status::data_loss("Failed to export config"))
+            }
+            Ok(_) => Ok(()),
+        },
+        // no config file to export to
+        None => Ok(()),
+    }
+}
