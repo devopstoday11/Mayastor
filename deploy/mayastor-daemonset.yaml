@@ -46,6 +46,7 @@ spec:
         - "-N$(MY_NODE_NAME)"
         - "-g$(MY_POD_IP)"
         - "-nnats"
+        - "-y/var/local/mayastor/config.yaml"
         securityContext:
           privileged: true
         volumeMounts:
@@ -53,6 +54,10 @@ spec:
           mountPath: /dev
         - name: dshm
           mountPath: /dev/shm
+        - name: configlocation
+          mountPath: /var/local/mayastor/
+        - name: config
+          mountPath: /var/local/mayastor/config.yaml
         resources:
           limits:
             cpu: "1"
@@ -78,3 +83,11 @@ spec:
       - name: hugepage
         emptyDir:
           medium: HugePages
+      - name: configlocation
+        hostPath:
+          path: /var/local/mayastor/
+          type: DirectoryOrCreate
+      - name: config
+        hostPath:
+          path: /var/local/mayastor/config.yaml
+          type: FileOrCreate
